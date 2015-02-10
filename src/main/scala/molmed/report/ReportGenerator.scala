@@ -63,34 +63,36 @@ object ReportGenerator {
    * the "GATKText.properties" file and used that as the version of GATK.
    */
   private def getGATKVersion(): String = {
-    val jars = getJarsOnClassPath()
-    val gatkJars =
-      jars.filter(s => s.getName().contains("GenomeAnalysisTK.jar"))
+//    val jars = getJarsOnClassPath()
+//    val gatkJars =
+//      jars.filter(s => s.getName().contains("Queue.jar"))
+//
+//    if (gatkJars.size == 1) {
+//      val jarFile = new JarFile(gatkJars(0).getAbsolutePath())
+//
+//      val properties = jarFile.getEntry("GATKText.properties")
+//      val version =
+//        if (properties == null)
+//          Constants.unknown
+//        else {
+//          val inputStream = jarFile.getInputStream(properties)
+//
+//          val reader = scala.io.Source.fromInputStream(inputStream)
+//          val versionLine =
+//            reader.getLines.find(p =>
+//              p.startsWith("org.broadinstitute.gatk.engine.CommandLineGATK.version="))
+//          val versionFromFile = versionLine.getOrElse(Constants.unknown).split("=")(1)
+//
+//          reader.close
+//          inputStream.close()
+//
+//          versionFromFile
+//        }
+//      version
+//    } else
+//      Constants.unknown
+    org.broadinstitute.gatk.engine.CommandLineGATK.getVersionNumber
 
-    if (gatkJars.size == 1) {
-      val jarFile = new JarFile(gatkJars(0).getAbsolutePath())
-
-      val properties = jarFile.getEntry("GATKText.properties")
-      val version =
-        if (properties == null)
-          Constants.unknown
-        else {
-          val inputStream = jarFile.getInputStream(properties)
-
-          val reader = scala.io.Source.fromInputStream(inputStream)
-          val versionLine =
-            reader.getLines.find(p =>
-              p.startsWith("org.broadinstitute.gatk.engine.CommandLineGATK.version="))
-          val versionFromFile = versionLine.getOrElse(Constants.unknown).split("=")(1)
-
-          reader.close
-          inputStream.close()
-
-          versionFromFile
-        }
-      version
-    } else
-      Constants.unknown
   }
 
   /**

@@ -190,11 +190,11 @@ object SetupUtils {
       x match {
         case x: Platformunit => {
 
-          val fastqFiles = x.getFastqfile()
+          val fastqFiles = x.getSeqfile()
 
           fastqFiles.add({
-            val fastqFile = new Fastqfile
-            fastqFile.setPath(sampleInfo.fastq.getAbsolutePath())
+            val fastqFile = new Seqfile
+            fastqFile.setPath(sampleInfo.seqfile.getAbsolutePath())
             fastqFile
           })
 
@@ -295,7 +295,7 @@ object SetupUtils {
    *             └── P1142_101_NoIndex_L002_R1_001.fastq.gz
    *
    *
-   * @param The project to add the info to.
+   * @param project The project to add the info to.
    * @param fileList a list of FASTQ files
    * @return a Project instance
    */
@@ -447,7 +447,6 @@ object SetupUtils {
   /**
    * Writes the project to stdout. Useful for debugging.
    * @param project		The project to write
-   * @param outputFile	The file to write to.
    */
   def writeToStdOut(project: Project) = {
     // The xml marshaller is used to create the xml instance

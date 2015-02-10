@@ -433,13 +433,13 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
     //  From best practice: -an DP -an QD -an FS -an MQRankSum -an ReadPosRankSum
     this.use_annotation ++= List("QD", "FS", "MQRankSum", "ReadPosRankSum")
 
+    this.resource :+= new TaggedFile(gatkOptions.hapmap.get, "known=false,training=true,truth=true,prior=15.0")
+    this.resource :+= new TaggedFile(gatkOptions.omni.get, "known=false,training=true,truth=true,prior=12.0")
+    this.resource :+= new TaggedFile(gatkOptions.thousandGenomes.get, "known=false,training=true,truth=false,prior=10.0")
+    this.resource :+= new TaggedFile(gatkOptions.dbSNP.get, "known=true,training=false,truth=false,prior=2.0")
+
     // Whole genome case
     if (!t.isExome) {
-      this.resource :+= new TaggedFile(gatkOptions.hapmap.get, "known=false,training=true,truth=true,prior=15.0")
-      this.resource :+= new TaggedFile(gatkOptions.omni.get, "known=false,training=true,truth=true,prior=12.0")
-      this.resource :+= new TaggedFile(gatkOptions.thousandGenomes.get, "known=false,training=true,truth=false,prior=10.0")
-      this.resource :+= new TaggedFile(gatkOptions.dbSNP.get, "known=true,training=false,truth=false,prior=2.0")
-
       // Don't use the DP annotation for exome samples.
       this.use_annotation ++= List("DP")
     } else // exome specific parameters

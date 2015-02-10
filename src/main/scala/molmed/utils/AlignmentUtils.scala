@@ -4,18 +4,24 @@ import java.io.File
 
 import org.broadinstitute.gatk.queue.QScript
 
-import molmed.queue.setup.ReadPairContainer
+import org.broadinstitute.gatk.queue.extensions.gatk._
+import org.broadinstitute.gatk.queue.function.CommandLineFunction
+import org.broadinstitute.gatk.queue.function.InProcessFunction
+import org.broadinstitute.gatk.queue.function.ListWriterFunction
+import molmed.queue.setup._
+import molmed.queue.setup.InputSeqFileContainer
 import molmed.queue.setup.SampleAPI
 import molmed.utils.GeneralUtils.checkReferenceIsBwaIndexed
+import scala.collection.JavaConversions._
 
 /**
  * Base class for alignment workflows.
  */
 abstract class AligmentUtils(projectName: Option[String], uppmaxConfig: UppmaxConfig) extends UppmaxJob(uppmaxConfig)
 
-	/**
-	 * Holds classes and functions used for aligning with tophat
-	 */
+/**
+ * Holds classes and functions used for aligning with tophat
+ */
 class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: Option[String], uppmaxConfig: UppmaxConfig) extends AligmentUtils(projectName, uppmaxConfig) {
 
   /**
@@ -27,19 +33,19 @@ class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: O
    * @param fusionSearch			perform fussion search using tophat
    * @return a bam file with aligned reads.
    */
-  def align(qscript: QScript, libraryType: String, annotations: Option[File], 
-    outputDir: File, sampleName: String, sample: SampleAPI,
-    fusionSearch: Boolean): File = {
-    
-    val fastqs: ReadPairContainer = sample.getFastqs()
-  	val sampleDir = new File(outputDir + "/" + sampleName)
+  def align(qscript: QScript, libraryType: String, annotations: Option[File],
+            outputDir: File, sampleName: String, sample: SampleAPI,
+            fusionSearch: Boolean): File = {
+
+    val fastqs: InputSeqFileContainer = sample.getInputSeqFiles()
+    val sampleDir = new File(outputDir + "/" + sampleName)
     if(!sampleDir.exists()) {
-    	sampleDir.mkdirs()
+      sampleDir.mkdirs()
     }
     @Output var alignedBamFile: File = new File(sampleDir + "/" + "accepted_hits.bam")
     val outputLog = new File(sampleDir + "/qscript_tophap.stdout.log")
-     
-    if(fastqs.isMatePaired)
+
+    if(fastqs.hasPair)
     {
       qscript.add(this.tophat(fastqs.mate1, fastqs.mate2, alignedBamFile, sampleDir, sample.getReference, annotations, libraryType, outputLog, sample.getTophatStyleReadGroupInformationString(), fusionSearch))
     }
@@ -47,15 +53,15 @@ class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: O
     {
       qscript.add(this.singleReadTophat(fastqs.mate1, alignedBamFile, sampleDir, sample.getReference, annotations, libraryType, outputLog, sample.getTophatStyleReadGroupInformationString(), fusionSearch))
     }
-    return alignedBamFile  
+    return alignedBamFile
   }
-  
+
   /**
    * Base class for tophat. All general setting independent of wether it's single or double stranded alignment goes here.
    */
   abstract class tophatBase(sampleOutputDir: File, reference: File, annotations: Option[File], libraryType: String,
                             outputFile: File, readGroupInfo: String, fusionSearch: Boolean = false)
-      extends EightCoreJob {
+    extends EightCoreJob {
     // Sometime this should be kept, sometimes it shouldn't
     this.isIntermediate = false
     analysisName = "tophatBase"
@@ -86,8 +92,8 @@ class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: O
    * Commandline wrapper for for single read alignment with tophat.
    */
   case class singleReadTophat(@Input fastqs1: File, @Output alignedBamFile: File, sampleOutputDir: File, reference: File, annotations: Option[File], libraryType: String,  outputFile: File, readGroupInfo: String, fusionSearch: Boolean = false)
-      extends tophatBase(sampleOutputDir, reference, annotations, libraryType, outputFile, readGroupInfo, fusionSearch) {
-  	analysisName = "singleReadTophat"
+    extends tophatBase(sampleOutputDir, reference, annotations, libraryType, outputFile, readGroupInfo, fusionSearch) {
+    analysisName = "singleReadTophat"
     @Input var files1 = fastqs1
 
     val file1String = files1.getAbsolutePath()
@@ -109,8 +115,8 @@ class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: O
    * Commandline wrapper for for paired end alignment with tophat.
    */
   case class tophat(@Input fastqs1: File,@Input  fastqs2: File, @Output alignedBamFile: File, sampleOutputDir: File, reference: File, annotations: Option[File], libraryType: String, outputFile: File, readGroupInfo: String, fusionSearch: Boolean = false)
-      extends tophatBase(sampleOutputDir, reference, annotations, libraryType, outputFile, readGroupInfo, fusionSearch) {
-  	analysisName = "Tophat"
+    extends tophatBase(sampleOutputDir, reference, annotations, libraryType, outputFile, readGroupInfo, fusionSearch) {
+    analysisName = "Tophat"
     @Input var files1 = fastqs1
     @Input var files2 = fastqs2
 
@@ -134,11 +140,13 @@ class TophatAligmentUtils(tophatPath: String, tophatThreads: Int, projectName: O
 sealed trait AlignerOption
 case object BwaMem extends AlignerOption
 case object BwaAln extends AlignerOption
+case object NvoAln extends AlignerOption
+case object NvoAlnCS extends AlignerOption
 
 /**
  * Utility classes and functions for running bwa
  */
-class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samtoolsPath: String, projectName: Option[String], uppmaxConfig: UppmaxConfig) extends AligmentUtils(projectName, uppmaxConfig) {
+class AlignmentUtils(qscript: QScript, alignerPath: String, numThreads: Int, samtoolsPath: String, projectName: Option[String], uppmaxConfig: UppmaxConfig) extends AligmentUtils(projectName, uppmaxConfig) {
 
   /**
    * @param qscript						the qscript to in which the alignments should be used (usually "this")
@@ -147,10 +155,10 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
    * @param	reference					reference to align to
    * @param outputDir					output it to this dir
    * @param isIntermediateAlignment		true if the files should be deleted when dependents have been run.
-   * @param aligned						Aligner to use
+   * @param aligner						Aligner to use
    * @return a bam file with aligned reads.
    */
-  private def performAlignment(qscript: QScript)(fastqs: ReadPairContainer,
+  private def performAlignment(qscript: QScript)(fastqs: InputSeqFileContainer,
                                                  readGroupInfo: String,
                                                  reference: File,
                                                  outputDir: File,
@@ -163,7 +171,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
 
     aligner match {
       case Some(BwaAln) => {
-        if (fastqs.isMatePaired) {
+        if (fastqs.hasPair) {
           // Add jobs to the qgraph
           qscript.add(bwa_aln_se(fastqs.mate1, saiFile1, reference),
             bwa_aln_se(fastqs.mate2, saiFile2, reference),
@@ -175,11 +183,24 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
       }
       case Some(BwaMem) => {
         if (fastqs.isMatePaired) {
-          qscript.add(bwa_mem(fastqs.mate1, Some(fastqs.mate2), alignedBamFile, readGroupInfo, reference, bwaThreads, intermediate = isIntermediateAlignment))
+          qscript.add(bwa_mem(fastqs.mate1, Some(fastqs.mate2), alignedBamFile, readGroupInfo, reference, numThreads, intermediate = isIntermediateAlignment))
         } else {
-          qscript.add(bwa_mem(fastqs.mate1, None, alignedBamFile, readGroupInfo, reference, bwaThreads, intermediate = isIntermediateAlignment))
+          qscript.add(bwa_mem(fastqs.mate1, None, alignedBamFile, readGroupInfo, reference, numThreads, intermediate = isIntermediateAlignment))
         }
       }
+      case Some(NvoAlnCS) => {
+        qscript.add(novoalignCS(
+          inputFile = fastqs.files.get(0),
+          outBam = alignedBamFile,
+          reference = reference,
+          intermediate = isIntermediateAlignment,
+          isPairEnd = fastqs.hasPair,
+          libName = fastqs.sampleName.replaceFirst("\\..*$", "")
+        ))
+
+      }
+      case Some(NvoAln) => throw new Exception("Aligner not implemented yet")
+
       case None => throw new Exception("No Aligner was set in performAlignment(...)!")
     }
 
@@ -193,10 +214,10 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
    * @param aligner			Aligner to be used. Defaults to BwaMem.
    * @returns a aligned bam file.
    */
-  def align(sample: SampleAPI, outputDir: File, asIntermidate: Boolean, aligner: Option[AlignerOption] = Some(BwaMem)): File = {
+  def align(sample: SampleAPI, outputDir: File, asIntermidiate: Boolean, aligner: Option[AlignerOption] = Some(BwaMem)): File = {
 
     val sampleName = sample.getSampleName()
-    val fastqs = sample.getFastqs()
+    val fastqs = sample.getInputSeqFiles()
     val readGroupInfo = sample.getBwaStyleReadGroupInformationString()
     val reference = sample.getReference()
 
@@ -207,7 +228,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     checkReferenceIsBwaIndexed(reference)
 
     // Run the alignment
-    performAlignment(qscript)(fastqs, readGroupInfo, reference, outputDir, asIntermidate, aligner)
+    performAlignment(qscript)(fastqs, readGroupInfo, reference, outputDir, asIntermidiate, aligner)
   }
 
   // Find suffix array coordinates of single end reads
@@ -218,7 +239,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
 
     this.isIntermediate = true
 
-    def commandLine = bwaPath + " aln -t " + bwaThreads + " -q 5 " + ref + " " + fastq + " > " + sai
+    def commandLine = alignerPath + " aln -t " + numThreads + " -q 5 " + ref + " " + fastq + " > " + sai
     override def jobRunnerJobName = projectName.get + "_bwaAln"
   }
 
@@ -236,7 +257,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     // The output from this is a samfile, which can be removed later
     this.isIntermediate = intermediate
 
-    def commandLine = bwaPath + " samse " + ref + " " + sai + " " + mate1 + " -r " + readGroupInfo +
+    def commandLine = alignerPath + " samse " + ref + " " + sai + " " + mate1 + " -r " + readGroupInfo +
       sortAndIndex(alignedBam)
     override def jobRunnerJobName = projectName.get + "_bwaSamSe"
   }
@@ -253,7 +274,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     // The output from this is a samfile, which can be removed later
     this.isIntermediate = intermediate
 
-    def commandLine = bwaPath + " sampe " + ref + " " + sai1 + " " + sai2 + " " + mate1 + " " + mate2 +
+    def commandLine = alignerPath + " sampe " + ref + " " + sai1 + " " + sai2 + " " + mate1 + " " + mate2 +
       " -r " + readGroupInfo +
       sortAndIndex(alignedBam)
     override def jobRunnerJobName = projectName.get + "_bwaSamPe"
@@ -268,7 +289,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
                      intermediate: Boolean = false) extends SixteenCoreJob {
 
     def sortAndIndex(alignedBam: File): String = " | " + samtoolsPath + " view -Su - | " +
-      samtoolsPath + " sort -@ " + nbrOfThreads + " -m 7G " +  
+      samtoolsPath + " sort -@ " + nbrOfThreads + " -m 7G " +
       " - " + alignedBam.getAbsolutePath().replace(".bam", "") + ";" +
       samtoolsPath + " index " + alignedBam.getAbsoluteFile()
 
@@ -287,7 +308,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
       " " + mate1 + " "
 
     def commandLine =
-      bwaPath + " mem -M -t " + nbrOfThreads + " " +
+      alignerPath + " mem -M -t " + nbrOfThreads + " " +
         " -R " + readGroupInfo + " " +
         ref + mateString +
         sortAndIndex(alignedBam)
@@ -304,8 +325,35 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     // The output from this is a samfile, which can be removed later
     this.isIntermediate = intermediate
 
-    def commandLine = bwaPath + " bwasw -t " + bwaThreads + " " + ref + " " + fq +
+    def commandLine = alignerPath + " bwasw -t " + numThreads + " " + ref + " " + fq +
       sortAndIndex(bam)
     override def jobRunnerJobName = projectName.get + "_bwaSw"
+  }
+
+  // Perform aligment of color-space input files in BAM, XSQ format.
+  // This expect to work with only one library at a time.
+  // TODO: Check if need support for CSFASTQ format 
+  case class novoalignCS(inputFile: File, outBam: File, reference: File, intermediate: Boolean = false,
+                         isPairEnd:Boolean = false, libName: String) extends CommandLineFunction {
+    @Input(doc = "input file(s) to be aligned") var input = inputFile
+    @Input(doc = "reference") var ref = reference
+    @Output(doc = "output bam file") var bam = outBam
+    @Input(doc = "path to novosort for sort and index bam files") var novosort = "/usr/local/bin/novosort"
+
+    // The output from this is a samfile, which can be removed later
+    this.isIntermediate = intermediate
+
+    val novoOtherParams = "-o FullNW -o SAM -r Random -k -t 20,2.5 -p 5,15 0.35,10"
+
+    // We actually use novosort here
+    def sortAndIndex(alignedBam: File): String = " | " + samtoolsPath + " view -Su -F4 - | " +
+      novosort + " -i -c" + numThreads + " -m 7G " +
+      " -o " + alignedBam
+
+    def commandLine = if (isPairEnd) { "not implemented yet"} else {
+      alignerPath + " -d " + ref + " -f " + input + "-F 'XSQ' " + libName + novoOtherParams +
+        " -c " + numThreads + "2>" + bam.getAbsolutePath.replace(".bam", ".log") + sortAndIndex(bam)
+    }
+    override def jobRunnerJobName = projectName.get + "_nvoalnCS"
   }
 }

@@ -51,8 +51,8 @@ trait FileAndProgramResourceConfig {
    * Paths to programs
    */
 
-  @Input(doc = "The path to the binary of bwa (usually BAM files have already been mapped - but if you want to remap this is the option)", fullName = "path_to_bwa", shortName = "bwa", required = false)
-  var bwaPath: File = _
+  @Input(doc = "The path to the binary of bwa (usually BAM files have already been mapped - but if you want to remap this is the option)", fullName = "path_to_aligner", shortName = "alner", required = false)
+  var alignerPath: File = _
 
   @Input(doc = "The path to the binary of samtools", fullName = "path_to_samtools", shortName = "samtools", required = false)
   var samtoolsPath: File = _
@@ -236,8 +236,8 @@ trait FileAndProgramResourceConfig {
 
       val programNameToPathsMap = transformToNamePathMap(programs)
 
-      if (this.bwaPath == null)
-        this.bwaPath = getFileFromKey(programNameToPathsMap, Constants.BWA)
+      if (this.alignerPath == null)
+        this.alignerPath = getFileFromKey(programNameToPathsMap, Constants.BWA)
 
       if (this.samtoolsPath == null)
         this.samtoolsPath = getFileFromKey(programNameToPathsMap, Constants.SAMTOOLS)

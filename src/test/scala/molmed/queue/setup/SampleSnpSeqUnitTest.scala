@@ -21,8 +21,8 @@ class SampleSnpSeqUnitTest {
     val sampleName = "1"
     val reference = new File("src/test/resources/testdata/exampleFASTA.fasta").getAbsoluteFile()    
     val readGroupInfo = new ReadGroupInformation(sampleName, readGroupId, sequencingCenter, readLibrary, platform, platformUnitId)
-    val readPairContainer = new ReadPairContainer(new File("src/test/resources/testdata/runFolderWithSameSampleInMultipleLanes/Sample_1/exampleFASTQ_L001_R1_file.fastq").getAbsoluteFile(),
-        new File("src/test/resources/testdata/runFolderWithSameSampleInMultipleLanes/Sample_1/exampleFASTQ_L001_R2_file.fastq").getAbsoluteFile(),
+    val readPairContainer = new InputSeqFileContainer(Seq(new File("src/test/resources/testdata/runFolderWithSameSampleInMultipleLanes/Sample_1/exampleFASTQ_L001_R1_file.fastq").getAbsoluteFile(),
+        new File("src/test/resources/testdata/runFolderWithSameSampleInMultipleLanes/Sample_1/exampleFASTQ_L001_R2_file.fastq").getAbsoluteFile()),
         "1")
 
     val sample = new Sample(sampleName, reference, readGroupInfo, readPairContainer)
@@ -31,7 +31,7 @@ class SampleSnpSeqUnitTest {
     def testGetFastqs() {
 
         // Run the test
-        val actual = sample.getFastqs()
+        val actual = sample.getInputSeqFiles()
 
         assert(actual == readPairContainer)
     }

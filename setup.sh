@@ -12,8 +12,14 @@ INSTALL_PREFIX=$1
 
 if [ ! -n "$1" ];
 then
-  INSTALL_PREFIX="$HOME/Bin/Piper"
+  INSTALL_PREFIX="$HOME/bin/Piper"
 fi
+
+DIST=${2:-upsala}
+LIB_PATH=${3:-/sw/apps/build/slurm-drmaa/default/lib}
+
+# Put anything at fourth positional parameter will skip download and compile GATK
+DONT_COMPILE_GATK=${4}
 
 check_errs()
 {
@@ -50,7 +56,7 @@ download_and_install_gatk()
   mvn package
   check_errs $? "gatk compilation FAILED"
   mkdir ../lib
-  cp target/* ../lib/
+  cp target/Queue*.jar ../lib/
   cd ..
   rm -rf $GATK_INSTALL_DIR
 }
@@ -74,7 +80,12 @@ echo "########################################################"
 echo "Checking out and compiling the GATK and Queue"
 echo "########################################################"
 
+if [ -z ${DONT_COMPILE_GATK-x} ];
+then
 download_and_install_gatk
+else
+echo "Skipped downloading and compiling of GATK"
+fi
 
 echo "########################################################"
 echo "Download RNA-SeQC"
@@ -87,7 +98,7 @@ echo "########################################################"
 echo "Compile, package and install Piper"
 echo "########################################################"
 
-sbt/bin/sbt pack && make -C target/pack/ install PREFIX=$INSTALL_PREFIX
+sbt pack && make -C target/pack/ install PREFIX=$INSTALL_PREFIX
 check_errs $? "compiling and install piper failed."
 
 echo "########################################################"
@@ -99,10 +110,10 @@ check_errs $? "copying workflows failed."
 cp -rv --dereference qscripts $INSTALL_PREFIX/
 check_errs $? "copying qscripts failed."
 
-cp -rv globalConfig.* uppmax_global_config.xml $INSTALL_PREFIX/workflows/
+cp -rv ./config/${DIST}/globalConfig.* ./config/${DIST}/uppmax_global_config.xml $INSTALL_PREFIX/workflows/
 check_errs $? "copying globalConfig.sh failed."
 
-cp -rv globalConfig.xml $INSTALL_PREFIX/workflows/
+cp -rv ./config/${DIST}/globalConfig.xml $INSTALL_PREFIX/workflows/
 check_errs $? "copying globalConfig.xml failed."
 
 # Red text - making people notice instructions since pre-school!
@@ -132,7 +143,7 @@ coloured_text "  echo \"\" >>  ~/.bashrc"
 coloured_text "  echo \"# Piper related variables and setup\" >>  ~/.bashrc"
 coloured_text "  echo 'PATH=\$PATH:$INSTALL_PREFIX/bin' >> ~/.bashrc"
 coloured_text "  echo 'PATH=\$PATH:$INSTALL_PREFIX/workflows' >> ~/.bashrc"
-coloured_text "  echo 'export LD_LIBRARY_PATH=/sw/apps/build/slurm-drmaa/default/lib/:\$LD_LIBRARY_PATH' >> ~/.bashrc"
-coloured_text "  echo 'export PIPER_GLOB_CONF=$INSTALL_PREFIX/workflows/globalConfig.sh' >> ~/.bashrc" 
+coloured_text "  echo 'export LD_LIBRARY_PATH=${LIB_PATH}:\$LD_LIBRARY_PATH' >> ~/.bashrc"
+coloured_text "  echo 'export PIPER_GLOB_CONF=$INSTALL_PREFIX/workflows/globalConfig.sh' >> ~/.bashrc"
 echo "########################################################"
 

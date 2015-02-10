@@ -29,7 +29,7 @@ trait SetupXMLReaderAPI {
   def getSamples(): Map[String, Seq[SampleAPI]]
 
   /**
-   * @param sampleNam
+   * @param sampleName
    * @return the reference that the sample should be aligned to.
    */
   def getReference(sampleName: String): File

@@ -28,7 +28,7 @@ object DeliveryUtils {
           flowcellDir.mkdirs()
 
           samples.map(sample => {
-            createHardLinksForFiles(sample.getFastqs.getFiles, flowcellDir)
+            createHardLinksForFiles(sample.getInputSeqFiles.getFiles, flowcellDir)
           })
         }
       }

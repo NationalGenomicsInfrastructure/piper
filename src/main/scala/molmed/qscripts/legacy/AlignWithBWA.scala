@@ -6,7 +6,7 @@ import collection.JavaConversions._
 import org.broadinstitute.gatk.queue.extensions.picard._
 import molmed.queue.setup._
 import molmed.utils.GeneralUtils._
-import molmed.utils.BwaAlignmentUtils
+import molmed.utils.AlignmentUtils
 import molmed.utils.GeneralUtils
 import molmed.config.UppmaxXMLConfiguration
 
@@ -48,7 +48,7 @@ class AlignWithBWA extends QScript with UppmaxXMLConfiguration {
     val uppmaxConfig = loadUppmaxConfigFromXML()    
     val samples: Map[String, Seq[SampleAPI]] = setupReader.getSamples()
     
-    val alignmentHelper = new BwaAlignmentUtils(this, bwaPath, bwaThreads, samtoolsPath, projectName, uppmaxConfig)
+    val alignmentHelper = new AlignmentUtils(this, bwaPath, bwaThreads, samtoolsPath, projectName, uppmaxConfig)
     val generalUtils = new GeneralUtils(projectName, uppmaxConfig)
     
     // final output list of bam files

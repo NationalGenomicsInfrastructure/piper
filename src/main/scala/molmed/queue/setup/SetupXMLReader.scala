@@ -51,7 +51,7 @@ class SetupXMLReader(setupXML: File) extends SetupXMLReaderAPI {
         platformUnit <- library.getPlatformunit()
       } yield {
 
-        val fastqsFiles = platformUnit.getFastqfile()
+        val seqFiles = platformUnit.getSeqfile().map(f => new File(f.getPath)).toSeq
 
         val sampleName = sample.getSamplename()
         val reference = this.getReference(sampleName)
@@ -71,11 +71,9 @@ class SetupXMLReader(setupXML: File) extends SetupXMLReaderAPI {
             platformUnitId,
             readsPassFilter = None)
 
-        val readPairContainer = fastqsFiles.size() match {
-          case 1 => new ReadPairContainer(new File(fastqsFiles(0).getPath()))
-          case 2 => new ReadPairContainer(
-            new File(fastqsFiles(0).getPath()),
-            new File(fastqsFiles(1).getPath()))
+        val inputSeqFileContainer = seqFiles.size() match {
+          case 1 => new InputSeqFileContainer(seqFiles)
+          case 2 => new InputSeqFileContainer(seqFiles, hasPair = true)
           case _ => throw new Exception("Found unrecognized numer of read pairs!")
         }
 
@@ -83,7 +81,7 @@ class SetupXMLReader(setupXML: File) extends SetupXMLReaderAPI {
           sampleName,
           reference,
           readGroupInformation,
-          readPairContainer)
+          inputSeqFileContainer)
 
         sampleInstance
       }

@@ -24,7 +24,7 @@ import molmed.utils.ReadGroupUtils.getSampleNameFromReadGroups
 import htsjdk.samtools.SAMFileHeader.SortOrder
 import org.broadinstitute.gatk.queue.extensions.picard.CalculateHsMetrics
 import molmed.queue.setup.SampleAPI
-import molmed.queue.setup.ReadPairContainer
+import molmed.queue.setup.InputSeqFileContainer
 import molmed.queue.setup.Sample
 import org.broadinstitute.gatk.queue.util.StringFileConversions
 import org.broadinstitute.gatk.queue.QScript
@@ -112,18 +112,18 @@ class GeneralUtils(projectName: Option[String], uppmaxConfig: UppmaxConfig) exte
           name.replace("fastq", "trimmed.fastq.gz")
       }
 
-      val readpairContainer = sample.getFastqs
+      val readpairContainer = sample.getInputSeqFiles
 
-      val mate1SyncedFastq = new File(cutadaptOutputDir + "/" + sample.getReadGroupInformation.platformUnitId + "/" + constructTrimmedName(sample.getFastqs.mate1.getName()))
+      val mate1SyncedFastq = new File(cutadaptOutputDir + "/" + sample.getReadGroupInformation.platformUnitId + "/" + constructTrimmedName(sample.getInputSeqFiles.mate1.getName()))
       qscript.add(this.cutadapt(readpairContainer.mate1, mate1SyncedFastq, adaptor1, cutadaptPath, syncPath))
 
-      val mate2SyncedFastq = if (readpairContainer.isMatePaired) {
-        val mate2SyncedFastq = new File(cutadaptOutputDir + "/" + sample.getReadGroupInformation.platformUnitId + "/" + constructTrimmedName(sample.getFastqs.mate2.getName()))
+      val mate2SyncedFastq = if (readpairContainer.hasPair) {
+        val mate2SyncedFastq = new File(cutadaptOutputDir + "/" + sample.getReadGroupInformation.platformUnitId + "/" + constructTrimmedName(sample.getInputSeqFiles.mate2.getName()))
         qscript.add(this.cutadapt(readpairContainer.mate2, mate2SyncedFastq, adaptor2, cutadaptPath, syncPath))
         mate2SyncedFastq
       } else null
 
-      val readGroupContainer = new ReadPairContainer(mate1SyncedFastq, mate2SyncedFastq, sample.getSampleName)
+      val readGroupContainer = new InputSeqFileContainer(Seq(mate1SyncedFastq, mate2SyncedFastq), sample.getSampleName, hasPair = true)
 
       new Sample(sample.getSampleName, sample.getReference, sample.getReadGroupInformation, readGroupContainer)
     }

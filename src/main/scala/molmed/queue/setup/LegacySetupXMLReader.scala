@@ -173,7 +173,7 @@ class LegacySetupXMLReader(setupXML: File) extends SetupXMLReaderAPI {
    */
   private def buildReadPairContainer(
     sampleFolder: Samplefolder,
-    lane: Int): ReadPairContainer = {
+    lane: Int): InputSeqFileContainer = {
 
     val sampleName = sampleFolder.getName()
     val folder = new File(sampleFolder.getPath())
@@ -199,12 +199,14 @@ class LegacySetupXMLReader(setupXML: File) extends SetupXMLReaderAPI {
     val readPairContainer =
       (fastq1.size, fastq2.size) match {
         case (1, 1) =>
-          new ReadPairContainer(
+          new InputSeqFileContainer(Seq(
             fastq1.get(0).getAbsoluteFile(),
-            fastq2.get(0).getAbsoluteFile(),
-            sampleName)
+            fastq2.get(0).getAbsoluteFile()
+          ),
+            sampleName = sampleName,
+          hasPair = true)
         case (1, 0) =>
-          new ReadPairContainer(fastq1.get(0), null, sampleName)
+          new InputSeqFileContainer(Seq(fastq1.get(0)),sampleName = sampleName)
         case m: (Int, Int) if m._1 + m._2 > 2 =>
           throw new IllegalArgumentException(
             "Found more than two hits for sample: " + sampleName +

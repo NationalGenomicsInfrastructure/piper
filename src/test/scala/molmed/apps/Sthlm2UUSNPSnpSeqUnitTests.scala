@@ -34,7 +34,7 @@ class Sthlm2UUSNPSnpSeqUnitTests {
     date = "140528",
     flowCellId = "BC423WACXX",
     index = "1",
-    fastq = new File(sthlmRootDir +
+    seqfile = new File(sthlmRootDir +
       "/P1171_102/A/140702_AC41A2ANXX/" +
       "P1171_102_ATTCAGAA-CCTATCCT_L001_R1_001.fastq.gz"),
     read = 1)
@@ -256,7 +256,7 @@ class Sthlm2UUSNPSnpSeqUnitTests {
       date = "140528",
       flowCellId = "BC423WACXX",
       index = "NoIndex",
-      fastq = fileToParse,
+      seqfile = fileToParse,
       read = 1)
 
     val actual = Sthlm2UUSNP.
@@ -279,7 +279,7 @@ class Sthlm2UUSNPSnpSeqUnitTests {
       date = "140528",
       flowCellId = "BC423WACXX",
       index = "ATTCAGAA-CCTATCCT",
-      fastq = fileToParse,
+      seqfile = fileToParse,
       read = 1)
 
     val actual = Sthlm2UUSNP.

@@ -71,7 +71,7 @@ object Sthlm2UUSNP extends App {
   /**
    * Create hardlink corresponding to sequencing unit
    * @param sampleInfo		The sequencing unit
-   * @param uuSampleFolder	Folder to output to
+   * @param uuRunfolderFolder	Folder to output to
    * @return the target file
    */
   def createHardLink(
@@ -94,7 +94,7 @@ object Sthlm2UUSNP extends App {
 
     try {
       Files.createLink(Paths.get(targetFile.getAbsolutePath()),
-        Paths.get(sampleInfo.fastq.getPath()))
+        Paths.get(sampleInfo.seqfile.getPath()))
     } catch {
       case e: FileAlreadyExistsException =>
         System.err.println(
@@ -115,7 +115,7 @@ object Sthlm2UUSNP extends App {
     date: String,
     flowCellId: String,
     index: String,
-    fastq: File,
+    seqfile: File,
     read: Int)
 
   /**
@@ -139,7 +139,7 @@ object Sthlm2UUSNP extends App {
    */
   def parseSampleInfoFromFileHierarchy(
     file: File,
-    runfolder: File,
+    runFolder: File,
     libraryPrepDir: File): SampleInfo = {
 
     val libraryPrepName = libraryPrepDir.getName()
@@ -149,8 +149,8 @@ object Sthlm2UUSNP extends App {
       (split(0), split(split.length - 1))
     }
 
-    val runfolderName = runfolder.getName()
-    val (date, flowcellId) = getDataAndFlowcellIdFromRunfolder(runfolder)
+    val runfolderName = runFolder.getName()
+    val (date, flowcellId) = getDataAndFlowcellIdFromRunfolder(runFolder)
 
     val fileName = file.getName()
     val fastqFileRegexp =
@@ -165,7 +165,7 @@ object Sthlm2UUSNP extends App {
           date = date,
           flowCellId = flowcellId,
           index = m.group(2),
-          fastq = file,
+          seqfile = file,
           read = m.group(4).toInt)
       }).toSeq
 
@@ -194,7 +194,7 @@ object Sthlm2UUSNP extends App {
    * Add information on the sequencedUnit to the report
    * If the report file already exists it will remove the
    * report file and create a new one.
-   * @param sequencedUnit			The Sample info on the sequenced unit
+   * @param sequencedUnits			The Sample info on the sequenced unit
    * @param uppsalaStyleRunfolder	The runfolder to add the report to.
    * @return the report that was written to.
    */

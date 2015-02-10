@@ -2,4 +2,4 @@ target/
 *.jar
 .classpath
 .project
-~
+*.iml

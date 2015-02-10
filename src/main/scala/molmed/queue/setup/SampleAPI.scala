@@ -8,10 +8,11 @@ import java.io.File
  * readGroupId.
  */
 trait SampleAPI {
+
   /**
-   * @return the read pair container associated with the sample.
+   * @return list of input files and PairEnd information.
    */
-  def getFastqs(): ReadPairContainer
+  def getInputSeqFiles():InputSeqFileContainer
 
   /**
    * @return the read group information associated with the sample.

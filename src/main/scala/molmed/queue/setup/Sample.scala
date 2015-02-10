@@ -8,12 +8,12 @@ import java.io.File
  * information associated with it.
  */
 case class Sample(sampleName: String,
-                  val reference: File,
-                  val readGroupInformation: ReadGroupInformation,
-                  val readPairContainer: ReadPairContainer)
+                  reference: File,
+                  readGroupInformation: ReadGroupInformation,
+                  inputFiles: InputSeqFileContainer)
     extends SampleAPI {
 
-  def getFastqs(): ReadPairContainer = readPairContainer
+  def getInputSeqFiles(): InputSeqFileContainer = inputFiles
 
   def getBwaStyleReadGroupInformationString(): String = {
     readGroupInformation.parseToBwaApprovedString()

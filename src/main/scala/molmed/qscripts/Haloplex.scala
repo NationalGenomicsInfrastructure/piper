@@ -18,12 +18,7 @@ import org.broadinstitute.gatk.queue.extensions.picard.MergeSamFiles
 import org.broadinstitute.gatk.queue.extensions.picard.SortSam
 import org.broadinstitute.gatk.queue.function.ListWriterFunction
 import molmed.queue.extensions.picard.CollectTargetedPcrMetrics
-import molmed.queue.setup.ReadGroupInformation
-import molmed.queue.setup.ReadPairContainer
-import molmed.queue.setup.Sample
-import molmed.queue.setup.SampleAPI
-import molmed.queue.setup.SetupXMLReader
-import molmed.queue.setup.SetupXMLReaderAPI
+import molmed.queue.setup._
 import molmed.utils.Resources
 import molmed.utils.GeneralUtils._
 import htsjdk.samtools.SAMFileHeader
@@ -31,7 +26,7 @@ import htsjdk.samtools.SAMFileHeader.SortOrder
 import htsjdk.samtools.SAMTextHeaderCodec
 import molmed.utils.ReadGroupUtils._
 import molmed.utils.Uppmaxable
-import molmed.utils.BwaAlignmentUtils
+import molmed.utils.AlignmentUtils
 import molmed.utils.GeneralUtils
 import molmed.utils.UppmaxConfig
 import molmed.config.UppmaxXMLConfiguration
@@ -132,22 +127,25 @@ class Haloplex extends QScript
             name.replace("fastq", "trimmed.fastq.gz")
         }
 
-        val readpairContainer = sample.getFastqs
+        val readpairContainer = sample.getInputSeqFiles
 
         val platformUnitOutputDir = new File(cutadaptOutputDir + "/" + sample.getReadGroupInformation.platformUnitId)
         platformUnitOutputDir.mkdirs()
 
-        val mate1SyncedFastq = new File(platformUnitOutputDir + "/" + constructTrimmedName(sample.getFastqs.mate1.getName()))
+        val mate1SyncedFastq = new File(platformUnitOutputDir + "/" + constructTrimmedName(sample.getInputSeqFiles.mate1.getName()))
         add(new generalUtils.cutadapt(readpairContainer.mate1, mate1SyncedFastq, adaptor1, cutadaptPath, syncPath))
 
         val mate2SyncedFastq =
-          if (readpairContainer.isMatePaired) {
-            val mate2SyncedFastq = new File(platformUnitOutputDir + "/" + constructTrimmedName(sample.getFastqs.mate2.getName()))
+          if (readpairContainer.hasPair) {
+            val mate2SyncedFastq = new File(platformUnitOutputDir + "/" + constructTrimmedName(sample.getInputSeqFiles.mate2.getName()))
             add(new generalUtils.cutadapt(readpairContainer.mate2, mate2SyncedFastq, adaptor2, cutadaptPath, syncPath))
             mate2SyncedFastq
           } else null
 
-        val readGroupContainer = new ReadPairContainer(mate1SyncedFastq, mate2SyncedFastq, sample.getSampleName)
+        val readGroupContainer = new InputSeqFileContainer(files = Seq(mate1SyncedFastq, mate2SyncedFastq),
+                                                                       sampleName = sample.getSampleName(),
+                                                                       fileType = InputSeqFileType.FASTQ,
+                                                                       hasPair = readpairContainer.hasPair)
         new Sample(sample.getSampleName, sample.getReference, sample.getReadGroupInformation, readGroupContainer)
       }
 
@@ -207,7 +205,7 @@ class Haloplex extends QScript
     val cutAndSyncedSamples = cutSamples(samples, generalUtils)
 
     // Align with bwa
-    val alignmentHelper = new BwaAlignmentUtils(this, bwaPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig)
+    val alignmentHelper = new AlignmentUtils(this, alignerPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig)
     val cohortList =
       cutAndSyncedSamples.values.flatten.map(sample => alignmentHelper.align(sample, bamOutputDir, false, Some(BwaAln))).toSeq
 

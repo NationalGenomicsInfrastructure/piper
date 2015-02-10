@@ -4,7 +4,7 @@ import org.broadinstitute.gatk.queue.QScript
 import molmed.queue.setup.SampleAPI
 import molmed.utils.AlignerOption
 import molmed.utils.AlignmentQCUtils
-import molmed.utils.BwaAlignmentUtils
+import molmed.utils.AlignmentUtils
 import molmed.utils.BwaAln
 import molmed.utils.BwaMem
 import molmed.utils.GATKConfig
@@ -180,13 +180,13 @@ class DNABestPracticeVariantCalling extends QScript
                     alignmentOutputDir: File): Map[String, Seq[File]] = {
 
     val aligner: Option[AlignerOption] = decideAlignerType(bwaAlignerType)
-    val alignmentUtils = new BwaAlignmentUtils(this, bwaPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig)
+    val alignmentUtils = new AlignmentUtils(this, alignerPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig)
     val sampleNamesAndalignedBamFiles = samples.values.flatten.map(sample =>
       (sample.getSampleName,
         alignmentUtils.align(
           sample,
           alignmentOutputDir,
-          asIntermidate = doMergeSamples || doDataProcessing || doVariantCalling || doGenerateDelivery,
+          asIntermidiate = doMergeSamples || doDataProcessing || doVariantCalling || doGenerateDelivery,
           aligner)))
     val sampleNamesToBamMap = sampleNamesAndalignedBamFiles.groupBy(f => f._1).mapValues(f => f.map(x => x._2).toSeq)
     sampleNamesToBamMap
